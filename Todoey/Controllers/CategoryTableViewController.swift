@@ -7,18 +7,18 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class CategoryTableViewController: UITableViewController {
 
-    var categoryArray = [Category]()
-
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    let realm = try! Realm()
     
-    let path = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+    var categoryList: Results<Category>?
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+//        print(Realm.Configuration.defaultConfiguration.fileURL)
 
         loadCategories()
 
@@ -30,14 +30,14 @@ class CategoryTableViewController: UITableViewController {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoCategoryCell", for: indexPath)
         
-        cell.textLabel?.text  = categoryArray[indexPath.row].name
+        cell.textLabel?.text  = categoryList?[indexPath.row].name ?? "Start Creating Categories"
         
         return cell
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         
-        return categoryArray.count
+        return categoryList?.count ?? 1
         
     }
     
@@ -55,40 +55,33 @@ class CategoryTableViewController: UITableViewController {
         
         if let indexPath = tableView.indexPathForSelectedRow {
             
-            destinationVC.selectedCategory = categoryArray[indexPath.row]
+            destinationVC.selectedCategory = categoryList?[indexPath.row]
             
         }
     
     }
     
     
-    //MARK: - Mdoel Manipulation Methods
+    //MARK: - Model Manipulation Methods
     
-    func loadCategories(with request: NSFetchRequest<Category> = Category.fetchRequest()) {
-        
-        do {
-            
-            categoryArray = try context.fetch(request)
-        
-        } catch {
-            
-            print("Error loading category data\(error)")
-        }
-        
+    func loadCategories() {
+
+        categoryList = realm.objects(Category.self)
+
         tableView.reloadData()
-        
+
     }
     
-    func saveCategories() {
+    func save(category: Category) {
         
         do {
-            try context.save()
-        
+            try realm.write{
+                realm.add(category)
+            }
         } catch {
             print("Error saving category data\(error)")
         
         }
-        
         tableView.reloadData()
         
     }
@@ -102,11 +95,11 @@ class CategoryTableViewController: UITableViewController {
         
         let action = UIAlertAction(title: "Add", style: .default) { (action) in
         
-            let addNewCategory = Category(context: self.context)
+            let addNewCategory = Category()
             
-            addNewCategory.name = newCategoryName.text
-            self.categoryArray.append(addNewCategory)
-            self.saveCategories()
+            addNewCategory.name = newCategoryName.text!
+
+            self.save(category: addNewCategory)
         }
         
         alert.addTextField { (alertTextField) in
@@ -123,34 +116,38 @@ class CategoryTableViewController: UITableViewController {
     
 }
 
-//MARK: - Searchbar Methods
+    //MARK: - Searchbar Methods
 
 extension CategoryTableViewController: UISearchBarDelegate {
-    
+
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+
+        categoryList = categoryList?.filter("name CONTAINS %@", searchBar.text!).sorted(byKeyPath: "name", ascending: true)
         
-        let request : NSFetchRequest<Category> = Category.fetchRequest()
+        tableView.reloadData()
         
-        let predicate = NSPredicate(format: "name CONTAINS %@", searchBar.text!)
-        
-        let sortDescriptor = NSSortDescriptor(key: "name", ascending: true)
-        
-        request.predicate = predicate
-        request.sortDescriptors = [sortDescriptor]
-        
-        loadCategories(with: request)
-        
-    }
+//        let request : NSFetchRequest<Category> = Category.fetchRequest()
+//
+//        let predicate = NSPredicate(format: "name CONTAINS %@", searchBar.text!)
+//
+//        let sortDescriptor = NSSortDescriptor(key: "name", ascending: true)
+//
+//        request.predicate = predicate
+//        request.sortDescriptors = [sortDescriptor]
+//
+//        loadCategories(with: request)
     
+    }
+
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         if searchText.count == 0 {
-            
+
             loadCategories()
-            
+
             DispatchQueue.main.async {
-                
+
                 searchBar.resignFirstResponder()
-                
+
             }
         }
     }
