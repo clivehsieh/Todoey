@@ -125,17 +125,6 @@ extension CategoryTableViewController: UISearchBarDelegate {
         categoryList = categoryList?.filter("name CONTAINS %@", searchBar.text!).sorted(byKeyPath: "name", ascending: true)
         
         tableView.reloadData()
-        
-//        let request : NSFetchRequest<Category> = Category.fetchRequest()
-//
-//        let predicate = NSPredicate(format: "name CONTAINS %@", searchBar.text!)
-//
-//        let sortDescriptor = NSSortDescriptor(key: "name", ascending: true)
-//
-//        request.predicate = predicate
-//        request.sortDescriptors = [sortDescriptor]
-//
-//        loadCategories(with: request)
     
     }
 
